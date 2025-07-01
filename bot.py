@@ -6,7 +6,7 @@ from telegram.ext import (
 )
 
 TOKEN = os.getenv('BOT_TOKEN')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # https://linksaver-j8k4.onrender.com
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
 app = FastAPI()
 
@@ -35,23 +35,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео!")
 
-# Создаём Telegram Application
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-# Устанавливаем вебхук при старте
 @app.on_event("startup")
 async def on_startup():
     await telegram_app.bot.set_webhook(url=WEBHOOK_URL + "/webhook")
+    await telegram_app.start()
     print(f"Вебхук установлен: {WEBHOOK_URL}/webhook")
 
-# FastAPI эндпоинт для вебхука
+@app.on_event("shutdown")
+async def on_shutdown():
+    await telegram_app.stop()
+
 @app.post("/webhook")
 async def webhook(req: Request):
     data = await req.json()
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
-
-
