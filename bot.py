@@ -1,18 +1,18 @@
 import os
 from fastapi import FastAPI, Request
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+)
 
 TOKEN = os.getenv('BOT_TOKEN')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # https://linksaver-j8k4.onrender.com
 
-app = FastAPI()  # FastAPI сервер
-
-telegram_app = Application.builder().token(TOKEN).build()
+app = FastAPI()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! Я Link Saver — отправь мне ссылку на видео из TikTok, Instagram, YouTube или Pinterest, и я помогу скачать его."
+        "Привет! Я Link Saver — отправь мне ссылку на TikTok, Instagram, YouTube или Pinterest, и я помогу скачать её."
     )
 
 def detect_service(url: str) -> str:
@@ -30,25 +30,28 @@ def detect_service(url: str) -> str:
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     service = detect_service(text)
-
     if service == "unknown":
-        await update.message.reply_text("Похоже, это не ссылка на TikTok, Instagram, YouTube или Pinterest.")
+        await update.message.reply_text("Это не ссылка на поддерживаемый сервис.")
     else:
         await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео!")
 
-# Регистрируем обработчики
+# Создаём Telegram Application
+telegram_app = ApplicationBuilder().token(TOKEN).build()
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
+# Устанавливаем вебхук при старте
 @app.on_event("startup")
 async def on_startup():
-    # Устанавливаем Webhook при старте приложения
-    await telegram_app.bot.set_webhook(WEBHOOK_URL)
+    await telegram_app.bot.set_webhook(url=WEBHOOK_URL + "/webhook")
+    print(f"Вебхук установлен: {WEBHOOK_URL}/webhook")
 
-@app.post("/")
-async def telegram_webhook(req: Request):
+# FastAPI эндпоинт для вебхука
+@app.post("/webhook")
+async def webhook(req: Request):
     data = await req.json()
     update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.update_queue.put(update)
+    await telegram_app.process_update(update)
     return {"ok": True}
+
 
