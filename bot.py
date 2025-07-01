@@ -1,16 +1,20 @@
 import os
+from fastapi import FastAPI, Request
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# Получаем токен из переменной окружения BOT_TOKEN
 TOKEN = os.getenv('BOT_TOKEN')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+
+app = FastAPI()  # FastAPI сервер
+
+telegram_app = Application.builder().token(TOKEN).build()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! Я Link Saver — отправь мне ссылку на видео из TikTok, Instagram, YouTube или Pinterest, и я помогу скачать его."
     )
 
-# Функция для определения сервиса по ссылке
 def detect_service(url: str) -> str:
     if "tiktok.com" in url:
         return "tiktok"
@@ -32,11 +36,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео!")
 
-if __name__ == '__main__':
-    app = ApplicationBuilder().token(TOKEN).build()
+# Регистрируем обработчики
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+@app.on_event("startup")
+async def on_startup():
+    # Устанавливаем Webhook при старте приложения
+    await telegram_app.bot.set_webhook(WEBHOOK_URL)
 
-    print("Бот Link Saver запущен...")
-    app.run_polling()
+@app.post("/")
+async def telegram_webhook(req: Request):
+    data = await req.json()
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.update_queue.put(update)
+    return {"ok": True}
+
