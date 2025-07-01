@@ -41,6 +41,7 @@ telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handl
 
 @app.on_event("startup")
 async def on_startup():
+    await telegram_app.initialize()
     await telegram_app.bot.set_webhook(url=WEBHOOK_URL + "/webhook")
     await telegram_app.start()
     print(f"Вебхук установлен: {WEBHOOK_URL}/webhook")
@@ -48,6 +49,7 @@ async def on_startup():
 @app.on_event("shutdown")
 async def on_shutdown():
     await telegram_app.stop()
+    await telegram_app.shutdown()
 
 @app.post("/webhook")
 async def webhook(req: Request):
@@ -55,3 +57,4 @@ async def webhook(req: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
+
