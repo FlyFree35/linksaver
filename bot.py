@@ -5,8 +5,11 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 )
 
+# Читаем переменные окружения
 TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+
+print(f"Запускаем с TOKEN={TOKEN} WEBHOOK_URL={WEBHOOK_URL}")
 
 app = FastAPI()
 
@@ -35,16 +38,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео!")
 
+# Создаём Telegram приложение
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
 @app.on_event("startup")
 async def on_startup():
+    print(f"Устанавливаем вебхук на {WEBHOOK_URL}/webhook")
     await telegram_app.initialize()
+    if not WEBHOOK_URL:
+        print("ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
     await telegram_app.bot.set_webhook(url=WEBHOOK_URL + "/webhook")
     await telegram_app.start()
-    print(f"Вебхук установлен: {WEBHOOK_URL}/webhook")
+    print(f"Вебхук успешно установлен: {WEBHOOK_URL}/webhook")
 
 @app.on_event("shutdown")
 async def on_shutdown():
