@@ -1,7 +1,9 @@
+import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = '7932458839:AAGAQMuoeG9xdVsVTtCVOZOKH0-nacixGUY'  # Твой токен
+# Получаем токен из переменной окружения BOT_TOKEN
+TOKEN = os.getenv('BOT_TOKEN')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
