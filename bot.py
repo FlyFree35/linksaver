@@ -45,15 +45,18 @@ telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handl
 
 @app.on_event("startup")
 async def on_startup():
+    if not TOKEN:
+        print("❌ ОШИБКА: переменная окружения BOT_TOKEN не установлена!")
+        return
     if not WEBHOOK_URL:
-        print("ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
+        print("❌ ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
         return
     webhook_full_url = WEBHOOK_URL.rstrip("/") + "/webhook"
     print(f"Устанавливаем вебхук на: {webhook_full_url}")
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook(url=webhook_full_url)
     await telegram_app.start()
-    print(f"Вебхук успешно установлен: {webhook_full_url}")
+    print(f"✅ Вебхук успешно установлен: {webhook_full_url}")
 
 @app.on_event("shutdown")
 async def on_shutdown():
