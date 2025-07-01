@@ -8,10 +8,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Привет! Я Link Saver — отправь мне ссылку на видео из TikTok, Instagram, YouTube или Pinterest, и я помогу скачать его."
     )
 
+# Функция для определения сервиса по ссылке
+def detect_service(url: str) -> str:
+    if "tiktok.com" in url:
+        return "tiktok"
+    elif "instagram.com" in url:
+        return "instagram"
+    elif "youtube.com" in url or "youtu.be" in url:
+        return "youtube"
+    elif "pinterest.com" in url:
+        return "pinterest"
+    else:
+        return "unknown"
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    # Пока просто подтверждаем получение ссылки
-    await update.message.reply_text(f"Получил ссылку: {text}\nСкоро добавлю функцию скачивания!")
+    service = detect_service(text)
+
+    if service == "unknown":
+        await update.message.reply_text("Похоже, это не ссылка на TikTok, Instagram, YouTube или Pinterest.")
+    else:
+        await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео!")
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
