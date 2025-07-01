@@ -45,13 +45,15 @@ telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handl
 
 @app.on_event("startup")
 async def on_startup():
-    print(f"Устанавливаем вебхук на {WEBHOOK_URL}/webhook")
-    await telegram_app.initialize()
     if not WEBHOOK_URL:
         print("ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
-    await telegram_app.bot.set_webhook(url=WEBHOOK_URL + "/webhook")
+        return
+    webhook_full_url = WEBHOOK_URL.rstrip("/") + "/webhook"
+    print(f"Устанавливаем вебхук на: {webhook_full_url}")
+    await telegram_app.initialize()
+    await telegram_app.bot.set_webhook(url=webhook_full_url)
     await telegram_app.start()
-    print(f"Вебхук успешно установлен: {WEBHOOK_URL}/webhook")
+    print(f"Вебхук успешно установлен: {webhook_full_url}")
 
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -64,5 +66,3 @@ async def webhook(req: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
-
-
