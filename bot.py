@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 )
-import yt_dlp  # импортируем yt-dlp
+import yt_dlp
 
 # Читаем переменные окружения
 TOKEN = os.getenv('BOT_TOKEN')
@@ -47,14 +47,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Это не ссылка на поддерживаемый сервис.")
         return
 
-    await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас скачаю видео...")
+    await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео...")
 
+    os.makedirs("downloads", exist_ok=True)  # создаём папку, если нет
     filename = f"downloads/{update.effective_user.id}_{int(update.message.date.timestamp())}.mp4"
     try:
         await download_video(text, filename)
-        await update.message.reply_video(video=open(filename, 'rb'))
+        with open(filename, 'rb') as video_file:
+            await update.message.reply_video(video=video_file)
     except Exception as e:
-        print(f"Ошибка при скачивании: {e}")
+        print(f"❌ Ошибка при скачивании: {e}")
         await update.message.reply_text("Не удалось скачать видео 😢")
     finally:
         if os.path.exists(filename):
