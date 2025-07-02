@@ -16,7 +16,7 @@ app = FastAPI()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Привет! Я *Link Saver* — отправь мне ссылку на TikTok, Instagram, YouTube или Pinterest, и я помогу скачать видео.\n\n"
+        "👋 Привет! Я *Link Saver* — отправь мне ссылку на TikTok, Instagram или YouTube, и я помогу скачать видео.\n\n"
         "✨ А ещё попробуй моего второго бота — [Emotional DJ](https://t.me/emotionaldj_bot), он подбирает музыку под настроение! 🎵",
         parse_mode='Markdown'
     )
@@ -29,8 +29,6 @@ def detect_service(url: str) -> str:
         return "Instagram"
     elif "youtube.com" in url or "youtu.be" in url:
         return "YouTube"
-    elif "pinterest.com" in url:
-        return "Pinterest"
     else:
         return "unknown"
 
@@ -42,13 +40,12 @@ async def download_video(url: str, output_path: str, service: str):
             'outtmpl': output_path,
             'format': 'mp4',
         }
+        # Для Instagram может понадобиться куки
         if service == "Instagram":
             ydl_opts['cookiefile'] = 'instagram_cookies.txt'
-        elif service == "Pinterest":
-            ydl_opts['cookiefile'] = 'pinterest_cookies.txt'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-        return output_path  # вернём путь, чтобы потом проверить
+        return output_path
 
     return await loop.run_in_executor(None, run_yt_dlp)
 
@@ -56,7 +53,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     service = detect_service(text)
     if service == "unknown":
-        await update.message.reply_text("❗ Это не ссылка на поддерживаемый сервис.")
+        await update.message.reply_text("❗ Это не ссылка на поддерживаемый сервис. Я поддерживаю только TikTok, Instagram и YouTube.")
         return
 
     await update.message.reply_text(f"🔍 Обнаружен сервис: {service}. Сейчас попробую скачать видео...")
@@ -67,7 +64,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         downloaded_file = await download_video(text, filename, service)
 
-        # Проверим, что файл реально появился
         if not os.path.exists(downloaded_file):
             await update.message.reply_text("😢 Не удалось найти файл после загрузки.")
             return
@@ -85,7 +81,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"❌ Ошибка при скачивании: {e}")
         await update.message.reply_text(
             "Не удалось скачать видео 😢 Возможно, ссылка неправильная или видео недоступно.\n"
-            "Если это Instagram или Pinterest — проверь, что в проекте есть правильный файл cookies!"
+            "Если это Instagram — проверь, что файл instagram_cookies.txt лежит в проекте!"
         )
     finally:
         if os.path.exists(filename):
