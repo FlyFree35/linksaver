@@ -7,7 +7,6 @@ from telegram.ext import (
 )
 import yt_dlp
 
-# Читаем переменные окружения
 TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
@@ -49,7 +48,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео...")
 
-    os.makedirs("downloads", exist_ok=True)  # создаём папку, если нет
+    os.makedirs("downloads", exist_ok=True)
     filename = f"downloads/{update.effective_user.id}_{int(update.message.date.timestamp())}.mp4"
     try:
         await download_video(text, filename)
@@ -62,7 +61,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if os.path.exists(filename):
             os.remove(filename)
 
-# Создаём Telegram приложение
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
@@ -75,7 +73,7 @@ async def on_startup():
     if not WEBHOOK_URL:
         print("❌ ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
         return
-    webhook_full_url = WEBHOOK_URL.rstrip("/") + "/webhook"
+    webhook_full_url = WEBHOOK_URL  # без прибавления /webhook, уже полный URL
     print(f"Устанавливаем вебхук на: {webhook_full_url}")
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook(url=webhook_full_url)
