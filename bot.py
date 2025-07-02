@@ -21,13 +21,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def detect_service(url: str) -> str:
     if "tiktok.com" in url:
-        return "tiktok"
+        return "TikTok"
     elif "instagram.com" in url:
-        return "instagram"
+        return "Instagram"
     elif "youtube.com" in url or "youtu.be" in url:
-        return "youtube"
+        return "YouTube"
     elif "pinterest.com" in url:
-        return "pinterest"
+        return "Pinterest"
     else:
         return "unknown"
 
@@ -43,20 +43,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     service = detect_service(text)
     if service == "unknown":
-        await update.message.reply_text("Это не ссылка на поддерживаемый сервис.")
+        await update.message.reply_text("❗ Это не ссылка на поддерживаемый сервис.")
         return
 
-    await update.message.reply_text(f"Это ссылка на сервис: {service}. Сейчас попробую скачать видео...")
+    await update.message.reply_text(f"🔍 Обнаружен сервис: {service}. Сейчас попробую скачать видео...")
 
     os.makedirs("downloads", exist_ok=True)
     filename = f"downloads/{update.effective_user.id}_{int(update.message.date.timestamp())}.mp4"
     try:
         await download_video(text, filename)
         with open(filename, 'rb') as video_file:
-            await update.message.reply_video(video=video_file)
+            await update.message.reply_video(
+                video=video_file,
+                caption="✅ Скачано с помощью [Link Saver](https://t.me/LinkSaverVideo_Bot)"
+            )
     except Exception as e:
         print(f"❌ Ошибка при скачивании: {e}")
-        await update.message.reply_text("Не удалось скачать видео 😢")
+        await update.message.reply_text("Не удалось скачать видео 😢 Возможно, ссылка неправильная или видео недоступно.")
     finally:
         if os.path.exists(filename):
             os.remove(filename)
@@ -73,7 +76,7 @@ async def on_startup():
     if not WEBHOOK_URL:
         print("❌ ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
         return
-    webhook_full_url = WEBHOOK_URL  # без прибавления /webhook, уже полный URL
+    webhook_full_url = WEBHOOK_URL  # у тебя уже полный URL
     print(f"Устанавливаем вебхук на: {webhook_full_url}")
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook(url=webhook_full_url)
