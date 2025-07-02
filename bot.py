@@ -33,17 +33,23 @@ def detect_service(url: str) -> str:
     else:
         return "unknown"
 
-async def download_video(url: str, output_path: str):
+async def download_video(url: str, output_path: str, service: str):
     loop = asyncio.get_event_loop()
     def run_yt_dlp():
         ydl_opts = {
             'outtmpl': output_path,
             'format': 'mp4',
-            'cookies': 'cookies.txt'  # Используем куки для Instagram
         }
+
+        # Добавляем cookies для Instagram и Pinterest
+        if service == "Instagram":
+            ydl_opts['cookiefile'] = 'instagram_cookies.txt'
+        elif service == "Pinterest":
+            ydl_opts['cookiefile'] = 'pinterest_cookies.txt'
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-    await loop.run_in_executor(None, run_yt_dlp)
+    return loop.run_in_executor(None, run_yt_dlp)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -57,7 +63,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.makedirs("downloads", exist_ok=True)
     filename = f"downloads/{update.effective_user.id}_{int(update.message.date.timestamp())}.mp4"
     try:
-        await download_video(text, filename)
+        await download_video(text, filename, service)
         with open(filename, 'rb') as video_file:
             await update.message.reply_video(
                 video=video_file,
@@ -71,7 +77,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"❌ Ошибка при скачивании: {e}")
         await update.message.reply_text(
             "Не удалось скачать видео 😢 Возможно, ссылка неправильная или видео недоступно. "
-            "Если это Instagram — проверь, добавлен ли файл cookies.txt!"
+            "Если это Instagram или Pinterest — проверь, добавлен ли файл cookies.txt!"
         )
     finally:
         if os.path.exists(filename):
