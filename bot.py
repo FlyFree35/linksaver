@@ -16,7 +16,9 @@ app = FastAPI()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! Я Link Saver — отправь мне ссылку на TikTok, Instagram, YouTube или Pinterest, и я помогу скачать её."
+        "👋 Привет! Я *Link Saver* — отправь мне ссылку на TikTok, Instagram, YouTube или Pinterest, и я помогу скачать видео.\n\n"
+        "✨ А ещё попробуй моего второго бота — [Emotional DJ](https://t.me/emotionaldj_bot), он подбирает музыку под настроение! 🎵",
+        parse_mode='Markdown'
     )
 
 def detect_service(url: str) -> str:
@@ -55,7 +57,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         with open(filename, 'rb') as video_file:
             await update.message.reply_video(
                 video=video_file,
-                caption="✅ Скачано с помощью [Link Saver](https://t.me/LinkSaverVideo_Bot)"
+                caption=(
+                    "✅ Скачано с помощью [Link Saver](https://t.me/LinkSaverVideo_Bot)\n"
+                    "✨ Также попробуй моего второго бота — [Emotional DJ](https://t.me/emotionaldj_bot) 🎵"
+                ),
+                parse_mode='Markdown'
             )
     except Exception as e:
         print(f"❌ Ошибка при скачивании: {e}")
@@ -76,7 +82,7 @@ async def on_startup():
     if not WEBHOOK_URL:
         print("❌ ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
         return
-    webhook_full_url = WEBHOOK_URL  # у тебя уже полный URL
+    webhook_full_url = WEBHOOK_URL
     print(f"Устанавливаем вебхук на: {webhook_full_url}")
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook(url=webhook_full_url)
@@ -94,4 +100,3 @@ async def webhook(req: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
-
