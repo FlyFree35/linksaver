@@ -7,6 +7,7 @@ from telegram.ext import (
 )
 import yt_dlp
 
+# Получаем токен и URL вебхука из переменных окружения
 TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
@@ -14,6 +15,7 @@ print(f"Запускаем с TOKEN={TOKEN} WEBHOOK_URL={WEBHOOK_URL}")
 
 app = FastAPI()
 
+# Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привет! Я *Link Saver* — отправь мне ссылку на TikTok, Instagram или YouTube, и я помогу скачать видео.\n\n"
@@ -21,6 +23,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
+# Определяем сервис по ссылке
 def detect_service(url: str) -> str:
     url = url.lower()
     if "tiktok.com" in url:
@@ -32,6 +35,7 @@ def detect_service(url: str) -> str:
     else:
         return "unknown"
 
+# Функция для скачивания видео
 async def download_video(url: str, output_path: str, service: str):
     loop = asyncio.get_event_loop()
 
@@ -40,17 +44,16 @@ async def download_video(url: str, output_path: str, service: str):
             'outtmpl': output_path,
             'format': 'mp4',
         }
-        # добавляем cookies, если нужно
+        # Добавляем файл cookies, если нужно
         if service == "Instagram":
             ydl_opts['cookiefile'] = 'instagram_cookies.txt'
-        elif service == "YouTube":
-            ydl_opts['cookiefile'] = 'youtube_cookies.txt'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
         return output_path
 
     return await loop.run_in_executor(None, run_yt_dlp)
 
+# Обработка всех текстовых сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     service = detect_service(text)
@@ -58,6 +61,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if service == "unknown":
         await update.message.reply_text(
             "❗ Это не ссылка на поддерживаемый сервис. Я поддерживаю только TikTok, Instagram и YouTube."
+        )
+        return
+
+    if service == "YouTube":
+        await update.message.reply_text(
+            "🚀 Функция скачивания видео с YouTube (включая Shorts) скоро будет доступна!\n"
+            "Следите за обновлениями 😊"
         )
         return
 
@@ -78,7 +88,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 video=video_file,
                 caption=(
                     "✅ Скачано с помощью [Link Saver](https://t.me/LinkSaverVideo_Bot)\n"
-                    "✨ Также попробуй моего второго бота — [Emotional DJ](https://t.me/emotionaldj_bot) 🎵"
+                    "✨ А ещё попробуй моего второго бота — [Emotional DJ](https://t.me/emotionaldj_bot) 🎵"
                 ),
                 parse_mode='Markdown'
             )
@@ -86,16 +96,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"❌ Ошибка при скачивании: {e}")
         await update.message.reply_text(
             "Не удалось скачать видео 😢 Возможно, ссылка неправильная или видео недоступно.\n"
-            "Если это Instagram или YouTube — проверь, что файл cookies лежит в проекте!"
+            "Если это Instagram — проверь, что файл cookies лежит в проекте!"
         )
     finally:
         if os.path.exists(filename):
             os.remove(filename)
 
+# Инициализация бота и обработчиков
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
+# Запуск вебхука при старте
 @app.on_event("startup")
 async def on_startup():
     if not TOKEN:
@@ -104,18 +116,19 @@ async def on_startup():
     if not WEBHOOK_URL:
         print("❌ ОШИБКА: переменная окружения WEBHOOK_URL не установлена!")
         return
-    webhook_full_url = WEBHOOK_URL
-    print(f"Устанавливаем вебхук на: {webhook_full_url}")
+    print(f"Устанавливаем вебхук на: {WEBHOOK_URL}")
     await telegram_app.initialize()
-    await telegram_app.bot.set_webhook(url=webhook_full_url)
+    await telegram_app.bot.set_webhook(url=WEBHOOK_URL)
     await telegram_app.start()
-    print(f"✅ Вебхук успешно установлен: {webhook_full_url}")
+    print(f"✅ Вебхук успешно установлен: {WEBHOOK_URL}")
 
+# Остановка бота при завершении
 @app.on_event("shutdown")
 async def on_shutdown():
     await telegram_app.stop()
     await telegram_app.shutdown()
 
+# Маршрут для обработки вебхука
 @app.post("/webhook")
 async def webhook(req: Request):
     data = await req.json()
