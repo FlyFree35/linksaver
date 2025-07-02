@@ -36,7 +36,11 @@ def detect_service(url: str) -> str:
 async def download_video(url: str, output_path: str):
     loop = asyncio.get_event_loop()
     def run_yt_dlp():
-        ydl_opts = {'outtmpl': output_path, 'format': 'mp4'}
+        ydl_opts = {
+            'outtmpl': output_path,
+            'format': 'mp4',
+            'cookies': 'cookies.txt'  # Используем куки для Instagram
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
     await loop.run_in_executor(None, run_yt_dlp)
@@ -65,7 +69,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     except Exception as e:
         print(f"❌ Ошибка при скачивании: {e}")
-        await update.message.reply_text("Не удалось скачать видео 😢 Возможно, ссылка неправильная или видео недоступно.")
+        await update.message.reply_text(
+            "Не удалось скачать видео 😢 Возможно, ссылка неправильная или видео недоступно. "
+            "Если это Instagram — проверь, добавлен ли файл cookies.txt!"
+        )
     finally:
         if os.path.exists(filename):
             os.remove(filename)
