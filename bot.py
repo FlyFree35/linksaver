@@ -36,19 +36,21 @@ def detect_service(url: str) -> str:
 
 async def download_video(url: str, output_path: str, service: str):
     loop = asyncio.get_event_loop()
+
     def run_yt_dlp():
         ydl_opts = {
             'outtmpl': output_path,
             'format': 'mp4',
         }
-        # Для Instagram и Pinterest — куки
         if service == "Instagram":
             ydl_opts['cookiefile'] = 'instagram_cookies.txt'
         elif service == "Pinterest":
             ydl_opts['cookiefile'] = 'pinterest_cookies.txt'
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-    return loop.run_in_executor(None, run_yt_dlp)
+        return output_path  # вернём путь, чтобы потом проверить
+
+    return await loop.run_in_executor(None, run_yt_dlp)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -63,8 +65,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     filename = f"downloads/{update.effective_user.id}_{int(update.message.date.timestamp())}.mp4"
 
     try:
-        await download_video(text, filename, service)
-        with open(filename, 'rb') as video_file:
+        downloaded_file = await download_video(text, filename, service)
+
+        # Проверим, что файл реально появился
+        if not os.path.exists(downloaded_file):
+            await update.message.reply_text("😢 Не удалось найти файл после загрузки.")
+            return
+
+        with open(downloaded_file, 'rb') as video_file:
             await update.message.reply_video(
                 video=video_file,
                 caption=(
@@ -113,4 +121,3 @@ async def webhook(req: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
-
